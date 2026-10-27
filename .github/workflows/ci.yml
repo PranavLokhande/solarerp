@@ -1,0 +1,52 @@
+name: Solar ERP CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install backend dependencies
+        run: cd server && npm ci
+
+      - name: Run backend TypeScript check
+        run: cd server && npx tsc --noEmit
+
+      - name: Run automated Vitest test suite
+        run: cd server && npm test
+        env:
+          MONGO_URI: mongodb://localhost:27017/solar_erp_test
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd client && npm ci
+
+      - name: Run frontend TypeScript & Vite production build
+        run: cd client && npm run build

@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: solar-erp-mongodb
+    restart: always
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: solar_erp
+    networks:
+      - solar-network
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: solar-erp-server
+    restart: always
+    ports:
+      - '5000:5000'
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGO_URI: mongodb://mongodb:27017/solar_erp
+      JWT_SECRET: super-secret-solar-erp-jwt-access-key-2026
+      JWT_REFRESH_SECRET: super-secret-solar-erp-refresh-key-2026
+      CORS_ORIGIN: http://localhost:80
+      UPLOAD_DIR: /app/uploads
+    depends_on:
+      - mongodb
+    volumes:
+      - uploads-data:/app/uploads
+    networks:
+      - solar-network
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: solar-erp-client
+    restart: always
+    ports:
+      - '80:80'
+    depends_on:
+      - server
+    networks:
+      - solar-network
+
+volumes:
+  mongo-data:
+  uploads-data:
+
+networks:
+  solar-network:
+    driver: bridge
